@@ -1,0 +1,27 @@
+FROM ubuntu@sha256:33ceb71981b602c1a7443a53469e4dba065f7503eab3078a2d7a57a2ab987517
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl xz \
+    && rm -rf /var/lib/apt/lists/*
+
+# Never run a third-party installer as root, and never run one unverified.
+RUN groupadd --gid 10001 hermes \
+    && useradd --uid 10001 --gid hermes --create-home --shell /bin/bash hermes
+USER hermes
+WORKDIR /home/hermes
+
+# Pin the installer by digest. Regenerate when NousResearch ships a new
+# installer: curl -fsSL https://hermes-agent.nousresearch.com/install.sh | sha256sum
+ENV HERMES_INSTALL_SHA256=c0380bc1f78d3d662a77663ce20cc17e14cbc4bec35e61ab7a33bac5f3afed2d
+
+RUN curl -fsSL https://hermes-agent.nousresearch.com/install.sh -o /tmp/install.sh \
+    && echo "${HERMES_INSTALL_SHA256}  /tmp/install.sh" | sha256sum -c - \
+    && bash /tmp/install.sh \
+    && rm /tmp/install.sh
+
+CMD ["bash"]
+
+# Runtime hardening (can't be expressed in a Containerfile — apply at `docker run`
+# or in your orchestrator's pod/container security context):
+#   --cap-drop=ALL --security-opt=no-new-privileges:true --read-only --tmpfs /tmp
+# See .wiki/wiki/concepts/container-runtime-hardening.md for the full rationale.
