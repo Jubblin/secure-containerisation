@@ -18,6 +18,17 @@ WORKDIR /home/hermes
 # installer: curl -fsSL https://hermes-agent.nousresearch.com/install.sh | sha256sum
 ENV HERMES_INSTALL_SHA256=c0380bc1f78d3d662a77663ce20cc17e14cbc4bec35e61ab7a33bac5f3afed2d
 
+RUN curl -fsSL https://nodejs.org/dist/latest-v26.x/node-v26.7.0-linux-x64.tar.xz -o /tmp/node.tar.xz \
+    && tar xf /tmp/node.tar.xz -C /tmp \
+    && git clone --quiet https://github.com/NousResearch/hermes-agent.git /tmp/hermes-test \
+    && cd /tmp/hermes-test \
+    && export PATH=/tmp/node-v26.7.0-linux-x64/bin:$PATH \
+    && (free -h || true) \
+    && (ulimit -a || true) \
+    && (time npm install) 2>&1 | tail -100 \
+    && echo "NPM_EXIT: $?" \
+    && rm -rf /tmp/node.tar.xz /tmp/node-v26.7.0-linux-x64 /tmp/hermes-test
+
 RUN curl -fsSL https://hermes-agent.nousresearch.com/install.sh -o /tmp/install.sh \
     && echo "${HERMES_INSTALL_SHA256}  /tmp/install.sh" | sha256sum -c - \
     && bash /tmp/install.sh \
