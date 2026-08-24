@@ -20,6 +20,7 @@ jobs:
       id-token: write # required for keyless (OIDC) attestation signing
       attestations: write
       security-events: write # required to upload SARIF to the Security tab
+      actions: read # upload-sarif reads workflow-run context internally
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
