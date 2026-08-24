@@ -55,7 +55,7 @@ jobs:
 
       # Quality gate: fail the build on known-fixable HIGH/CRITICAL vulnerabilities.
       - name: Scan with Trivy
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           image-ref: ${{ steps.target.outputs.ref }}
           severity: CRITICAL,HIGH
