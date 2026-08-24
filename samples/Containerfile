@@ -16,7 +16,7 @@ ENV HERMES_INSTALL_SHA256=c0380bc1f78d3d662a77663ce20cc17e14cbc4bec35e61ab7a33ba
 
 RUN curl -fsSL https://hermes-agent.nousresearch.com/install.sh -o /tmp/install.sh \
     && echo "${HERMES_INSTALL_SHA256}  /tmp/install.sh" | sha256sum -c - \
-    && bash /tmp/install.sh \
+    && bash -x /tmp/install.sh \
     && rm /tmp/install.sh
 
 CMD ["bash"]
