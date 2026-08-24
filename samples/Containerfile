@@ -4,7 +4,10 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl xz-utils git tar nodejs npm \
     && rm -rf /var/lib/apt/lists/*
 
-RUN ls -la /lib64/ 2>&1 || echo "NO /lib64"; ls -la /lib/x86_64-linux-gnu/ld-linux* 2>&1 || echo "NO ld-linux in multiarch dir"
+RUN curl -fsSL https://nodejs.org/dist/latest-v26.x/node-v26.7.0-linux-x64.tar.xz -o /tmp/node.tar.xz \
+    && tar xf /tmp/node.tar.xz -C /tmp \
+    && (ldd /tmp/node-v26.7.0-linux-x64/bin/node 2>&1; /tmp/node-v26.7.0-linux-x64/bin/node --version 2>&1; echo "node exit: $?") \
+    && rm -rf /tmp/node.tar.xz /tmp/node-v26.7.0-linux-x64
 
 # Never run a third-party installer as root, and never run one unverified.
 RUN groupadd --gid 10001 hermes \
