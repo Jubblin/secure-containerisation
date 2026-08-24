@@ -5,7 +5,7 @@ FROM ubuntu@sha256:33ceb71981b602c1a7443a53469e4dba065f7503eab3078a2d7a57a2ab987
 # and silently fails to start without it (node --version exits 127 with no
 # output), which the installer doesn't check for and dies on.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl xz-utils git tar libatomic1 \
+    && apt-get install -y --no-install-recommends ca-certificates curl xz-utils git tar libatomic1 build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Never run a third-party installer as root, and never run one unverified.
