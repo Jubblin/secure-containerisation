@@ -1,11 +1,15 @@
 FROM ubuntu@sha256:33ceb71981b602c1a7443a53469e4dba065f7503eab3078a2d7a57a2ab987517
 
-# libatomic1: not pulled in by anything else here, but the Node.js binary
-# the installer downloads (see below) dynamically links against libatomic.so.1
-# and silently fails to start without it (node --version exits 127 with no
-# output), which the installer doesn't check for and dies on.
+# libatomic1: the Node.js binary the installer downloads dynamically links
+# against libatomic.so.1 and silently fails to start without it (node
+# --version exits 127 with no output), which the installer doesn't check
+# for and dies on.
+# build-essential + python3: node-gyp needs both to compile node-pty (a
+# native module pulled in by the browser-tools npm install) - without
+# python3 on PATH it fails with "Could not find any Python installation",
+# suppressed entirely by the installer's own `npm install --silent`.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl xz-utils git tar libatomic1 build-essential \
+    && apt-get install -y --no-install-recommends ca-certificates curl xz-utils git tar libatomic1 build-essential python3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Never run a third-party installer as root, and never run one unverified.
@@ -17,18 +21,6 @@ WORKDIR /home/hermes
 # Pin the installer by digest. Regenerate when NousResearch ships a new
 # installer: curl -fsSL https://hermes-agent.nousresearch.com/install.sh | sha256sum
 ENV HERMES_INSTALL_SHA256=c0380bc1f78d3d662a77663ce20cc17e14cbc4bec35e61ab7a33bac5f3afed2d
-
-RUN curl -fsSL https://nodejs.org/dist/latest-v26.x/node-v26.7.0-linux-x64.tar.xz -o /tmp/node.tar.xz \
-    && tar xf /tmp/node.tar.xz -C /tmp \
-    && git clone --quiet https://github.com/NousResearch/hermes-agent.git /tmp/hermes-test \
-    && cd /tmp/hermes-test \
-    && export PATH=/tmp/node-v26.7.0-linux-x64/bin:$PATH \
-    && free -h \
-    && ( npm install >/tmp/npm-diag.log 2>&1; echo $? >/tmp/npm-rc ) \
-    && echo "NPM_EXIT=$(cat /tmp/npm-rc)" \
-    && tail -150 /tmp/npm-diag.log \
-    && free -h \
-    && rm -rf /tmp/node.tar.xz /tmp/node-v26.7.0-linux-x64 /tmp/hermes-test
 
 RUN curl -fsSL https://hermes-agent.nousresearch.com/install.sh -o /tmp/install.sh \
     && echo "${HERMES_INSTALL_SHA256}  /tmp/install.sh" | sha256sum -c - \
