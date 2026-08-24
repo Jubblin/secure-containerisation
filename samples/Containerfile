@@ -4,6 +4,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl xz-utils git tar nodejs npm \
     && rm -rf /var/lib/apt/lists/*
 
+RUN ls -la /lib64/ 2>&1 || echo "NO /lib64"; ls -la /lib/x86_64-linux-gnu/ld-linux* 2>&1 || echo "NO ld-linux in multiarch dir"
+
 # Never run a third-party installer as root, and never run one unverified.
 RUN groupadd --gid 10001 hermes \
     && useradd --uid 10001 --gid hermes --create-home --shell /bin/bash hermes
