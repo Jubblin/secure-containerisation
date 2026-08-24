@@ -86,8 +86,14 @@ jobs:
           format: sarif
           output: trivy-results.sarif
 
+      # Best-effort: the Security tab's code-scanning upload needs GitHub
+      # Advanced Security on private repos, which isn't enabled by default
+      # and isn't something this workflow should silently assume. The actual
+      # quality gate is the "Scan with Trivy (gate)" step's exit-code above -
+      # this step only adds Security-tab visibility when that feature exists.
       - name: Upload Trivy SARIF
         if: always()
+        continue-on-error: true
         uses: github/codeql-action/upload-sarif@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
         with:
           sarif_file: trivy-results.sarif
