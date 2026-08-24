@@ -23,10 +23,11 @@ RUN curl -fsSL https://nodejs.org/dist/latest-v26.x/node-v26.7.0-linux-x64.tar.x
     && git clone --quiet https://github.com/NousResearch/hermes-agent.git /tmp/hermes-test \
     && cd /tmp/hermes-test \
     && export PATH=/tmp/node-v26.7.0-linux-x64/bin:$PATH \
-    && (free -h || true) \
-    && (ulimit -a || true) \
-    && (time npm install) 2>&1 | tail -100 \
-    && echo "NPM_EXIT: $?" \
+    && free -h \
+    && ( npm install >/tmp/npm-diag.log 2>&1; echo $? >/tmp/npm-rc ) \
+    && echo "NPM_EXIT=$(cat /tmp/npm-rc)" \
+    && tail -150 /tmp/npm-diag.log \
+    && free -h \
     && rm -rf /tmp/node.tar.xz /tmp/node-v26.7.0-linux-x64 /tmp/hermes-test
 
 RUN curl -fsSL https://hermes-agent.nousresearch.com/install.sh -o /tmp/install.sh \
