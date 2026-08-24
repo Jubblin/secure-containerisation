@@ -19,6 +19,7 @@ jobs:
       packages: write
       id-token: write # required for keyless (OIDC) attestation signing
       attestations: write
+      security-events: write # required to upload SARIF to the Security tab
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -57,10 +58,24 @@ jobs:
             echo "ref=${{ env.IMAGE }}@${{ steps.build.outputs.digest }}" >> "$GITHUB_OUTPUT"
           fi
 
-      # Quality gate: fail the build on known-fixable HIGH/CRITICAL vulnerabilities.
       # Pinned by commit, not tag: aquasecurity/trivy-action had 76 of 77 tags
       # force-pushed to credential-stealing malware in March 2026 (GHSA-69fq-xp46-6x23).
-      - name: Scan with Trivy
+      #
+      # Two scans of the same image: SARIF is opaque in the job log (it's JSON,
+      # not for humans), so a table-format pass runs first purely for log
+      # readability; the SARIF pass is the actual blocking gate. Both hit
+      # Trivy's local vuln-db cache from the first scan, so the second is fast.
+      - name: Scan with Trivy (readable log output)
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        with:
+          image-ref: ${{ steps.target.outputs.ref }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '0'
+          format: table
+
+      # Quality gate: fail the build on known-fixable HIGH/CRITICAL vulnerabilities.
+      - name: Scan with Trivy (gate)
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
           image-ref: ${{ steps.target.outputs.ref }}
