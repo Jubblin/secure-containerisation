@@ -1,0 +1,106 @@
+# termic Docker sandbox: one image, every supported agent. The per-task agent
+# is just the command run inside it. Edit the marked regions, then rebuild
+# from termic. Agents are UNPINNED (always latest); "Update agents" re-fetches
+# them without re-running the base and apt layers.
+
+# ── Base: current Node LTS (>=22, satisfies Copilot) + Debian ──────────
+FROM node:lts-bookworm
+
+# ── System toolchain ───────────────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      git \
+      curl \
+      ca-certificates \
+      ripgrep \
+      less \
+      openssh-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# claude and agy install to ~/.local/bin, grok to ~/.grok/bin.
+ENV PATH="/root/.local/bin:/root/.grok/bin:${PATH}"
+
+# The worktree is bind-mounted from the host, so it is owned by a different
+# uid and git refuses every command as "dubious ownership" without this. Safe
+# here: the only repos in this throwaway cage are your own.
+RUN git config --global --add safe.directory '*'
+
+# ── GitHub / GitLab CLIs ───────────────────────────────────────────────
+# termic mounts a shared config dir for each, so `gh auth login` once inside
+# any Docker task persists. Your Mac's own ~/.config/gh is never mounted.
+
+# hadolint ignore=DL3008 Intentionally using apt-get to install gh
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /usr/share/keyrings/githubcli-archive-keyring.gpg \
+    && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list \
+    && apt-get update && apt-get install -y --no-install-recommends gh \
+    && rm -rf /var/lib/apt/lists/*
+
+# glab ships per-release .debs, so the latest version is resolved first.
+# NON-FATAL on purpose: this is the one step that depends on the shape of a
+# JSON response, and a GitLab CLI nobody uses must not fail every Docker task.
+# hadolint ignore=DL3008 Intentionally using apt-get to install glab
+RUN GLAB_VER=$(curl -fsSL "https://gitlab.com/api/v4/projects/gitlab-org%2Fcli/releases/permalink/latest" | sed -n 's/.*"tag_name":"v\([^"]*\)".*/\1/p') \
+    && curl -fsSL -o /tmp/glab.deb "https://gitlab.com/gitlab-org/cli/-/releases/v${GLAB_VER}/downloads/glab_${GLAB_VER}_linux_$(dpkg --print-architecture).deb" \
+    && dpkg -i /tmp/glab.deb && rm -f /tmp/glab.deb \
+    || echo "WARNING: glab install failed, the GitLab CLI will be missing from this image"
+
+# Push over HTTPS through whichever CLI is logged in. Baked in here because
+# `gh auth setup-git` writes ~/.gitconfig, which every container throws away.
+RUN git config --global credential."https://github.com".helper '!gh auth git-credential' \
+    && git config --global credential."https://gist.github.com".helper '!gh auth git-credential' \
+    && git config --global credential."https://gitlab.com".helper '!glab auth git-credential'
+
+# ── Agent refresh boundary ─────────────────────────────────────────────
+# Docker invalidates a layer and everything after it. Bumping this arg
+# re-fetches the unpinned agents below without re-running the base pull and
+# apt install above, which are the slow half and rarely what changed.
+ARG TERMIC_AGENT_REFRESH=0
+RUN echo "agent refresh: $TERMIC_AGENT_REFRESH" > /dev/null
+
+# ── Agents: one per line, each after its install docs ──────────────────
+# https://code.claude.com/docs/en/setup (native binary; npm is deprecated)
+# hadolint ignore=DL3008 Intentionally using apt-get to install claude
+RUN curl -fsSL https://claude.ai/install.sh | bash
+# https://www.npmjs.com/package/@openai/codex
+RUN npm install -g @openai/codex
+# https://www.npmjs.com/package/@github/copilot
+RUN npm install -g @github/copilot
+# https://www.npmjs.com/package/opencode-ai
+RUN npm install -g opencode-ai
+# https://docs.x.ai/build/cli (native binary -> ~/.grok/bin)
+RUN curl -fsSL https://x.ai/cli/install.sh | bash
+# https://antigravity.google/docs/cli/install (native binary -> ~/.local/bin)
+RUN curl -fsSL https://antigravity.google/cli/install.sh | bash
+# https://pi.dev/docs/latest - from npm ON PURPOSE, not pi.dev/install.sh:
+# that can put the binary inside ~/.pi, which is also its config dir, and
+# mounting a config dir over its own binary is why grok can never persist.
+RUN npm install -g @earendil-works/pi-coding-agent
+# https://developer.meta.com/ai/resources/blog/build-with-muse-code/ - curl
+# is the only install path Meta publishes (no npm package). The shim lands in
+# ~/.local/bin (already on PATH above) and re-execs a versioned sibling
+# binary next to it, NOT inside ~/.config/muse or ~/.local/share/muse, so
+# mounting those config dirs cannot shadow it the way it would for grok.
+# Costs ~235MB of image: the binary is statically linked and self-contained.
+#
+# NON-FATAL, the same call glab gets above and for a sharper reason. This is
+# the largest and newest install here, it pulls a ~235MB binary from a second
+# host (lookaside.facebook.com) through a launcher that has an HTTP 401 path of
+# its own, and a hard failure here would break EVERY Docker task for everyone,
+# including the people who have never run muse. A missing muse is one agent
+# unavailable in the container; a failed build is all of them.
+RUN curl -fsSL https://dev.meta.ai/install.sh | bash \
+    || echo "WARNING: muse install failed, Muse Code will be missing from this image"
+
+# ── Add your own MCP servers, CLI tools and skills here ────────────────
+# RUN npm install -g @some/mcp-server
+# RUN apt-get update && apt-get install -y <pkg> && rm -rf /var/lib/apt/lists/*
+# COPY my-skills/ /root/.claude/skills/
+
+# termic runs the container as YOUR uid, not root (Claude Code refuses
+# --dangerously-skip-permissions as root). That uid has no /etc/passwd entry,
+# so /root - where HOME points and every agent keeps its config - is made
+# world-writable. Safe in a --rm, --cap-drop ALL, no-new-privileges cage.
+RUN chmod -R a+rwX /root
+
+WORKDIR /workspace
+CMD ["bash"]
