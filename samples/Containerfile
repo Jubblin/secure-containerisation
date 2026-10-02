@@ -31,7 +31,7 @@ WORKDIR /home/hermes
 
 # Pin the installer by digest. Regenerate when NousResearch ships a new
 # installer: curl -fsSL https://hermes-agent.nousresearch.com/install.sh | sha256sum
-ENV HERMES_INSTALL_SHA256=9ed50b51fe072df4ece6dc9a72c1ec8d78bc7907eec16a61d8a2a0ef4ec45884
+ENV HERMES_INSTALL_SHA256=aced1b3c90be7e27afa631ab644605ea310fa02e5c5cce5e3e7a2e59e737f99d
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl -fsSL https://hermes-agent.nousresearch.com/install.sh -o /tmp/install.sh \
