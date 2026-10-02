@@ -7,13 +7,31 @@ on:
     branches: [main]
   workflow_dispatch:
 
-env:
-  CONTEXT: samples
-  CONTAINERFILE: samples/Containerfile
-
 jobs:
-  build-scan-attest:
+  discover:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - id: set
+        # Each ./builds/<name>/Containerfile becomes its own matrix leg,
+        # built with its own directory as context.
+        run: |
+          include=$(for f in ./builds/*/Containerfile; do
+            name=$(basename "$(dirname "$f")")
+            jq -nc --arg name "$name" --arg context "builds/$name" --arg file "builds/$name/Containerfile" \
+              '{name:$name, context:$context, file:$file}'
+          done | jq -sc .)
+          echo "matrix={\"include\":$include}" >> "$GITHUB_OUTPUT"
+
+  build-scan-attest:
+    needs: discover
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
     permissions:
       contents: read
       packages: write
@@ -27,8 +45,9 @@ jobs:
 
       # ghcr.io repository paths must be lowercase; github.repository preserves
       # the account's actual case (e.g. "Jubblin/repo"), so it can't be used directly.
+      # Each Containerfile's directory name becomes its own image within the repo.
       - name: Compute lowercase image name
-        run: echo "IMAGE=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+        run: echo "IMAGE=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')/${{ matrix.name }}" >> "$GITHUB_ENV"
 
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
@@ -44,8 +63,8 @@ jobs:
       - id: build
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
-          context: ${{ env.CONTEXT }}
-          file: ${{ env.CONTAINERFILE }}
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
           push: ${{ github.event_name != 'pull_request' }}
           load: ${{ github.event_name == 'pull_request' }}
           tags: ${{ env.IMAGE }}:${{ github.sha }}
@@ -108,7 +127,7 @@ jobs:
       - name: Upload SBOM artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: sbom
+          name: sbom-${{ matrix.name }}
           path: sbom.spdx.json
 
       # Everything below attests the image's *current, built state* — skipped on
