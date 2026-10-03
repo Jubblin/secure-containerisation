@@ -1,13 +1,15 @@
-# Pin to a release tag + index digest. Bump from Docker Hub tags when upgrading.
-FROM nousresearch/hermes-agent:v2026.9.7@sha256:63bfb6d732f49a55d453e801057273785cc61e0f6ee43db3fa2f2a79846301b7
+# Pin to an index digest. Bump from Docker Hub tags when upgrading
+# (find the new tag's digest, then paste it here — digest alone, no tag,
+# per SonarCloud: don't use both).
+FROM nousresearch/hermes-agent@sha256:2fd023efbb8d3d2b0ce1a73d028b07370cff34f567cfe0e999553e8c327ea283
 
+RUN apt-get -o Acquire::Retries=3 update && \
+    apt-get -o Acquire::Retries=3 upgrade -y && \
+    rm -rf /var/lib/apt/lists/*
+# npm install -g writes to /usr/local/lib/node_modules, root-owned — must
+# run as root before dropping to the unprivileged user.
 # hadolint ignore=DL3066
 USER root
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends unzip \
-    && rm -rf /var/lib/apt/lists/*
-# hadolint ignore=DL3066
+RUN npm install -g @bitwarden/cli \
+    && npm install -g @anthropic-ai/claude-code
 USER hermes
-RUN curl -LO -o /tmp/bw-linux.zip https://github.com/bitwarden/clients/releases/download/cli-v2026.9.1/bw-linux-2026.9.1.zip \
-    && unzip /tmp/bw-linux.zip \
-    && curl -fsSL https://claude.ai/install.sh | bash

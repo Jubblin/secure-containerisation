@@ -8,12 +8,12 @@ FROM node:lts-bookworm
 
 # ── System toolchain ───────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      git \
-      curl \
-      ca-certificates \
-      ripgrep \
-      less \
-      openssh-client \
+    git \
+    curl \
+    ca-certificates \
+    ripgrep \
+    less \
+    openssh-client \
     && rm -rf /var/lib/apt/lists/*
 
 # claude and agy install to ~/.local/bin, grok to ~/.grok/bin.
