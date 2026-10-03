@@ -3,6 +3,9 @@
 # per SonarCloud: don't use both).
 FROM nousresearch/hermes-agent@sha256:2fd023efbb8d3d2b0ce1a73d028b07370cff34f567cfe0e999553e8c327ea283
 
+RUN apt-get -o Acquire::Retries=3 update && \
+    apt-get -o Acquire::Retries=3 upgrade -y && \
+    rm -rf /var/lib/apt/lists/*
 # npm install -g writes to /usr/local/lib/node_modules, root-owned — must
 # run as root before dropping to the unprivileged user.
 # hadolint ignore=DL3066
