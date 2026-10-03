@@ -10,6 +10,6 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 # hadolint ignore=DL3066
 USER hermes
-RUN curl -LO -o /tmp/bw-linux.zip https://github.com/bitwarden/clients/releases/download/cli-v2026.9.1/bw-linux-2026.9.1.zip \
+RUN curl -fsSL -o /tmp/bw-linux.zip https://github.com/bitwarden/clients/releases/download/cli-v2026.9.1/bw-linux-2026.9.1.zip \
     && unzip /tmp/bw-linux.zip \
     && curl -fsSL https://claude.ai/install.sh | bash
