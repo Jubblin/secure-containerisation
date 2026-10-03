@@ -67,7 +67,7 @@ jobs:
       # readability; the SARIF pass is the actual blocking gate. Both hit
       # Trivy's local vuln-db cache from the first scan, so the second is fast.
       - name: Scan with Trivy (readable log output)
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0 # v0.35.0
         with:
           image-ref: ${{ steps.target.outputs.ref }}
           severity: CRITICAL,HIGH
@@ -77,7 +77,7 @@ jobs:
 
       # Quality gate: fail the build on known-fixable HIGH/CRITICAL vulnerabilities.
       - name: Scan with Trivy (gate)
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0 # v0.35.0
         with:
           image-ref: ${{ steps.target.outputs.ref }}
           severity: CRITICAL,HIGH
