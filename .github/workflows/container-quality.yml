@@ -74,6 +74,7 @@ jobs:
           ignore-unfixed: true
           exit-code: '0'
           format: table
+          version: v0.75.0
 
       # Quality gate: fail the build on known-fixable HIGH/CRITICAL vulnerabilities.
       - name: Scan with Trivy (gate)
@@ -85,6 +86,7 @@ jobs:
           exit-code: '1'
           format: sarif
           output: trivy-results.sarif
+          version: v0.75.0
 
       # Best-effort: the Security tab's code-scanning upload needs GitHub
       # Advanced Security on private repos, which isn't enabled by default
