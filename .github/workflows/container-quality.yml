@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
 
 env:
-  CONTEXT: samples
-  CONTAINERFILE: samples/Containerfile
+  CONTEXT: builds/hermes-agent
+  CONTAINERFILE: builds/hermes-agent/Containerfile
 
 jobs:
   build-scan-attest:
