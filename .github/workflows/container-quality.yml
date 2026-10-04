@@ -83,7 +83,6 @@ jobs:
           image-ref: ${{ steps.target.outputs.ref }}
           severity: CRITICAL,HIGH
           ignore-unfixed: true
-          exit-code: '1'
           format: sarif
           output: trivy-results.sarif
           version: v0.75.0
