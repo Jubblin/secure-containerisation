@@ -10,8 +10,5 @@ RUN apt-get update \
 RUN npm install -g @bitwarden/cli
 
 USER hermes
-RUN curl -fsSL https://claude.ai/install.sh | bash \
-    && npm install -g @openai/codex \
-    && npm install -g @github/copilot \
-    && npm install -g opencode-ai
+RUN curl -fsSL https://claude.ai/install.sh | bash
 
