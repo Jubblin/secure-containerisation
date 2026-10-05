@@ -1,5 +1,5 @@
 # Pin to a release tag + index digest. Bump from Docker Hub tags when upgrading.
-FROM nousresearch/hermes-agent@sha256:63bfb6d732f49a55d453e801057273785cc61e0f6ee43db3fa2f2a79846301b7
+FROM nousresearch/hermes-agent@sha256:d4da4a40cd7a28aba983775d9fd31d94cbf153eeb0cb9e844d6d0f612b7c24db
 
 # hadolint ignore=DL3066
 USER root
