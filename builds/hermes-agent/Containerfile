@@ -1,5 +1,5 @@
 # Pin to a release tag + index digest. Bump from Docker Hub tags when upgrading.
-FROM nousresearch/hermes-agent:v2026.9.7@sha256:63bfb6d732f49a55d453e801057273785cc61e0f6ee43db3fa2f2a79846301b7
+FROM nousresearch/hermes-agent@sha256:63bfb6d732f49a55d453e801057273785cc61e0f6ee43db3fa2f2a79846301b7
 
 # hadolint ignore=DL3066
 USER root
@@ -7,10 +7,11 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends unzip \
     && rm -rf /var/lib/apt/lists/*
 # hadolint ignore=DL3066
-USER root
-RUN curl -fsSL -o /tmp/bw-linux.zip https://github.com/bitwarden/clients/releases/download/cli-v2026.9.1/bw-linux-2026.9.1.zip \
-    && unzip -o /tmp/bw-linux.zip -d /tmp/bw \
-    && install -m 755 /tmp/bw/bw /usr/local/bin/bw
+RUN npm install -g @bitwarden/cli
 
 USER hermes
-RUN curl -fsSL https://claude.ai/install.sh | bash
+RUN curl -fsSL https://claude.ai/install.sh | bash \
+    && npm install -g @openai/codex \
+    && npm install -g @github/copilot \
+    && npm install -g opencode-ai
+
