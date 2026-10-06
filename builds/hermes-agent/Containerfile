@@ -1,16 +1,27 @@
 # Pin to a release tag + index digest. Bump from Docker Hub tags when upgrading.
 FROM nousresearch/hermes-agent@sha256:d4da4a40cd7a28aba983775d9fd31d94cbf153eeb0cb9e844d6d0f612b7c24db
 
+# Piped installers below must fail the build when the download fails.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# root only for the package installs; dropped back to hermes below.
 # hadolint ignore=DL3066
 USER root
+# unzip and @bitwarden/cli are unpinned on purpose: always current.
+# hadolint ignore=DL3008
 RUN apt-get update \
     && apt-get install -y --no-install-recommends unzip \
     && rm -rf /var/lib/apt/lists/*
-# hadolint ignore=DL3066
+# hadolint ignore=DL3016
 RUN npm install -g @bitwarden/cli
 
+# hermes is the base image's own non-root user; its uid isn't known here.
+# hadolint ignore=DL3066
 USER hermes
 RUN curl -fsSL https://claude.ai/install.sh | bash \
     && curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/master/install.sh | sh \
     &&  rtk init --global --agent claude \
-    &&  rtk init --agent hermes 
+    &&  rtk init --agent hermes
+
+# Interactive CLI image, no long-running service to probe.
+HEALTHCHECK NONE
