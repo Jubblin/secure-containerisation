@@ -10,5 +10,7 @@ RUN apt-get update \
 RUN npm install -g @bitwarden/cli
 
 USER hermes
-RUN curl -fsSL https://claude.ai/install.sh | bash
+RUN curl -fsSL https://claude.ai/install.sh | bash \
+    && curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/master/install.sh | sh 
+    
 
