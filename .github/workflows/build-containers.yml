@@ -25,7 +25,9 @@ jobs:
           )
           echo "matrix={\"include\":$dirs}" >> "$GITHUB_OUTPUT"
 
-  # Non-blocking: findings go to Security -> Code scanning, never fail the run.
+  # Blocking: any unsuppressed finding fails the run (and so skips build/push).
+  # Findings also go to Security -> Code scanning. Suppress with an inline
+  # `# hadolint ignore=` or a .trivyignore entry, with a reason.
   scan:
     runs-on: ubuntu-latest
     permissions:
@@ -42,18 +44,19 @@ jobs:
         with:
           dockerfile: Containerfile
           recursive: true
-          no-fail: true
           format: sarif
           output-file: hadolint.sarif
 
+      # always(): still scan and report with Trivy when hadolint has failed.
       - name: Trivy config scan
+        if: always()
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         env:
           TRIVY_FILE_PATTERNS: dockerfile:Containerfile
         with:
           scan-type: config
           scan-ref: .
-          exit-code: 0
+          exit-code: 1
           format: sarif
           output: trivy.sarif
 
