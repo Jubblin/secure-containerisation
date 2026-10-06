@@ -4,19 +4,20 @@ Hardened, digest-pinned container images for AI coding agents.
 
 ## Quick start
 
-Images are published to the GitHub Container Registry (GHCR) and tagged **only by commit SHA**. There is no `latest` tag. Pick a SHA from this repo's [GHCR packages page](https://github.com/Jubblin?tab=packages&repo_name=secure-containerisation), then pull and run it with the hardening flags:
+Images are published to the GitHub Container Registry (GHCR). Pull and run the `latest` tag with the hardening flags:
 
 ```sh
-SHA=<git-sha-from-packages-page>
-docker pull ghcr.io/jubblin/secure-containerisation/termic:$SHA
+docker pull ghcr.io/jubblin/secure-containerisation/termic:latest
 
 docker run --rm -it \
   --cap-drop=ALL \
   --security-opt=no-new-privileges:true \
   --read-only \
   --tmpfs /tmp \
-  ghcr.io/jubblin/secure-containerisation/termic:$SHA
+  ghcr.io/jubblin/secure-containerisation/termic:latest
 ```
+
+`latest` moves with every build of `main`. To pin a reproducible image, use a commit-SHA tag instead (`termic:<commit-sha>`); find them on the [GHCR packages page](https://github.com/Jubblin?tab=packages&repo_name=secure-containerisation).
 
 What the flags do:
 
@@ -69,8 +70,9 @@ The workflow [`build-containers.yml`](.github/workflows/build-containers.yml):
 
 1. Finds every `builds/*/` directory that contains a `Containerfile`.
 2. Builds each one for `linux/amd64` and `linux/arm64`.
-3. On push and manual runs, pushes `ghcr.io/jubblin/secure-containerisation/<dir>:<git-sha>`.
-4. On pull requests to `main`, builds only and pushes nothing.
+3. On push and manual runs, pushes `ghcr.io/jubblin/secure-containerisation/<dir>:<git-sha>` for every branch.
+4. On `main` only, also moves `<dir>:latest` to that build. Other branches never touch `latest`.
+5. On pull requests to `main`, builds only and pushes nothing.
 
 ## Building locally
 
