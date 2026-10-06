@@ -59,7 +59,7 @@ Each image installs one or more AI coding agents on a base image pinned by `sha2
 | Image | Base | Contents |
 | --- | --- | --- |
 | `hermes-agent` | `nousresearch/hermes-agent` | Nous Research hermes-agent, plus Bitwarden CLI (`@bitwarden/cli`) and Claude Code. Runs as user `hermes`. |
-| `termic` | `node` (current LTS, Debian) | Sandbox with `git`, `ripgrep`, `gh`, `glab`, and the agents Claude Code, Codex, Copilot, opencode, grok, antigravity, pi and muse. Working directory `/workspace`. |
+| `termic` | `node` (current LTS, Debian) | Sandbox with `git`, `ripgrep`, `gh`, `glab`, and the agents Claude Code, Codex, Copilot, opencode, grok, antigravity, pi and muse. Working directory `/workspace`. No `USER` is set, so plain `docker run` runs as root; termic runs it as your uid (`--user "$(id -u):$(id -g)"`), and `/root` (`HOME`, where agents keep config) is world-writable for that. |
 
 In `termic` the agents are not version-pinned; each build installs the latest release. `glab` and muse are optional: if their install fails, the build still succeeds without them.
 
