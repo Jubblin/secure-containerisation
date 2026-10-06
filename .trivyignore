@@ -1,0 +1,5 @@
+# DS-0002 (image user is root): builds/termic sets no USER because termic
+# always runs the container with --user <host uid>, never as root. Global
+# because Trivy gives this check no line to anchor an inline ignore to;
+# hermes-agent and samples both set a non-root USER.
+DS-0002

@@ -25,8 +25,8 @@ RUN apt-get update \
 RUN groupadd --gid 10001 hermes \
     && useradd --uid 10001 --gid hermes --create-home --shell /bin/bash hermes
 
-# hadolint ignore=DL3066 known good user
-USER hermes
+# Numeric uid:gid of the hermes user created above.
+USER 10001:10001
 WORKDIR /home/hermes
 
 # Pin the installer by digest. Regenerate when NousResearch ships a new
@@ -39,6 +39,8 @@ RUN curl -fsSL https://hermes-agent.nousresearch.com/install.sh -o /tmp/install.
     && bash /tmp/install.sh \
     && rm /tmp/install.sh
 
+# Interactive CLI image, no long-running service to probe.
+HEALTHCHECK NONE
 CMD ["bash"]
 
 # Runtime hardening (can't be expressed in a Containerfile — apply at `docker run`

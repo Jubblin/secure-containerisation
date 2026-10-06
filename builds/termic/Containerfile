@@ -6,7 +6,13 @@
 # ── Base: current Node LTS (>=22, satisfies Copilot) + Debian ──────────
 FROM node@sha256:a723b54c35a76e947095a20a67d39585bb09c862e6b1adeb8a9f518f95e34fb0
 
+# Fail a piped RUN (curl | bash) when the download fails, not just the last
+# command. The `|| echo` fallbacks on glab and muse below still apply.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 # ── System toolchain ───────────────────────────────────────────────────
+# Unpinned on purpose (see header): always the current Debian packages.
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
       git \
       curl \
@@ -28,7 +34,8 @@ RUN git config --global --add safe.directory '*'
 # termic mounts a shared config dir for each, so `gh auth login` once inside
 # any Docker task persists. Your Mac's own ~/.config/gh is never mounted.
 
-# hadolint ignore=DL3008 Intentionally using apt-get to install gh
+# gh is unpinned on purpose: always the latest from cli.github.com.
+# hadolint ignore=DL3008
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /usr/share/keyrings/githubcli-archive-keyring.gpg \
     && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list \
@@ -38,7 +45,6 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o 
 # glab ships per-release .debs, so the latest version is resolved first.
 # NON-FATAL on purpose: this is the one step that depends on the shape of a
 # JSON response, and a GitLab CLI nobody uses must not fail every Docker task.
-# hadolint ignore=DL3008 Intentionally using apt-get to install glab
 RUN GLAB_VER=$(curl -fsSL "https://gitlab.com/api/v4/projects/gitlab-org%2Fcli/releases/permalink/latest" | sed -n 's/.*"tag_name":"v\([^"]*\)".*/\1/p') \
     && curl -fsSL -o /tmp/glab.deb "https://gitlab.com/gitlab-org/cli/-/releases/v${GLAB_VER}/downloads/glab_${GLAB_VER}_linux_$(dpkg --print-architecture).deb" \
     && dpkg -i /tmp/glab.deb && rm -f /tmp/glab.deb \
@@ -58,14 +64,18 @@ ARG TERMIC_AGENT_REFRESH=0
 RUN echo "agent refresh: $TERMIC_AGENT_REFRESH" > /dev/null
 
 # ── Agents: one per line, each after its install docs ──────────────────
+# Unpinned on purpose (see header), and one RUN each so a broken agent only
+# invalidates its own layer: hence the DL3016/DL3059 ignores below.
 # https://code.claude.com/docs/en/setup (native binary; npm is deprecated)
-# hadolint ignore=DL3008 Intentionally using apt-get to install claude
 RUN curl -fsSL https://claude.ai/install.sh | bash
 # https://www.npmjs.com/package/@openai/codex
+# hadolint ignore=DL3016
 RUN npm install -g @openai/codex
 # https://www.npmjs.com/package/@github/copilot
+# hadolint ignore=DL3016,DL3059
 RUN npm install -g @github/copilot
 # https://www.npmjs.com/package/opencode-ai
+# hadolint ignore=DL3016,DL3059
 RUN npm install -g opencode-ai
 # https://docs.x.ai/build/cli (native binary -> ~/.grok/bin)
 RUN curl -fsSL https://x.ai/cli/install.sh | bash
@@ -74,6 +84,7 @@ RUN curl -fsSL https://antigravity.google/cli/install.sh | bash
 # https://pi.dev/docs/latest - from npm ON PURPOSE, not pi.dev/install.sh:
 # that can put the binary inside ~/.pi, which is also its config dir, and
 # mounting a config dir over its own binary is why grok can never persist.
+# hadolint ignore=DL3016
 RUN npm install -g @earendil-works/pi-coding-agent
 # https://developer.meta.com/ai/resources/blog/build-with-muse-code/ - curl
 # is the only install path Meta publishes (no npm package). The shim lands in
@@ -101,6 +112,10 @@ RUN curl -fsSL https://dev.meta.ai/install.sh | bash \
 # so /root - where HOME points and every agent keeps its config - is made
 # world-writable. Safe in a --rm, --cap-drop ALL, no-new-privileges cage.
 RUN chmod -R a+rwX /root
+# No USER on purpose: termic always passes --user <host uid>, so this image
+# never runs as root. Trivy DS-0002 is ignored in /.trivyignore for that reason.
 
 WORKDIR /workspace
+# Interactive CLI sandbox, no long-running service to probe.
+HEALTHCHECK NONE
 CMD ["bash"]
