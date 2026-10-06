@@ -6,8 +6,8 @@
 # ── Base: current Node LTS (>=22, satisfies Copilot) + Debian ──────────
 FROM node@sha256:a723b54c35a76e947095a20a67d39585bb09c862e6b1adeb8a9f518f95e34fb0
 
-# Fail a piped RUN (curl | bash) when the download fails, not just the last
-# command. The `|| echo` fallbacks on glab and muse below still apply.
+# A piped RUN (curl | bash) fails when the download fails, not just the last
+# command. The curl-piped installs below catch that with `|| echo` (non-fatal).
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # ── System toolchain ───────────────────────────────────────────────────
@@ -66,8 +66,11 @@ RUN echo "agent refresh: $TERMIC_AGENT_REFRESH" > /dev/null
 # ── Agents: one per line, each after its install docs ──────────────────
 # Unpinned on purpose (see header), and one RUN each so a broken agent only
 # invalidates its own layer: hence the DL3016/DL3059 ignores below.
+# Every curl-piped agent install is NON-FATAL (`|| echo`, rationale at muse):
+# one vendor's installer being down must not fail the build for every agent.
 # https://code.claude.com/docs/en/setup (native binary; npm is deprecated)
-RUN curl -fsSL https://claude.ai/install.sh | bash
+RUN curl -fsSL https://claude.ai/install.sh | bash \
+    || echo "WARNING: claude install failed, Claude Code will be missing from this image"
 # https://www.npmjs.com/package/@openai/codex
 # hadolint ignore=DL3016
 RUN npm install -g @openai/codex
@@ -77,8 +80,6 @@ RUN npm install -g @github/copilot
 # https://www.npmjs.com/package/opencode-ai
 # hadolint ignore=DL3016,DL3059
 RUN npm install -g opencode-ai
-# grok and agy are NON-FATAL like muse below: one vendor's installer being
-# down must not fail the build for every agent.
 # https://docs.x.ai/build/cli (native binary -> ~/.grok/bin)
 RUN curl -fsSL https://x.ai/cli/install.sh | bash \
     || echo "WARNING: grok install failed, Grok CLI will be missing from this image"
