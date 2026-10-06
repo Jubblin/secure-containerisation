@@ -77,10 +77,14 @@ RUN npm install -g @github/copilot
 # https://www.npmjs.com/package/opencode-ai
 # hadolint ignore=DL3016,DL3059
 RUN npm install -g opencode-ai
+# grok and agy are NON-FATAL like muse below: one vendor's installer being
+# down must not fail the build for every agent.
 # https://docs.x.ai/build/cli (native binary -> ~/.grok/bin)
-RUN curl -fsSL https://x.ai/cli/install.sh | bash
+RUN curl -fsSL https://x.ai/cli/install.sh | bash \
+    || echo "WARNING: grok install failed, Grok CLI will be missing from this image"
 # https://antigravity.google/docs/cli/install (native binary -> ~/.local/bin)
-RUN curl -fsSL https://antigravity.google/cli/install.sh | bash
+RUN curl -fsSL https://antigravity.google/cli/install.sh | bash \
+    || echo "WARNING: antigravity install failed, Antigravity CLI will be missing from this image"
 # https://pi.dev/docs/latest - from npm ON PURPOSE, not pi.dev/install.sh:
 # that can put the binary inside ~/.pi, which is also its config dir, and
 # mounting a config dir over its own binary is why grok can never persist.
