@@ -11,6 +11,6 @@ RUN npm install -g @bitwarden/cli
 
 USER hermes
 RUN curl -fsSL https://claude.ai/install.sh | bash \
-    && curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/master/install.sh | sh 
-    
-
+    && curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/master/install.sh | sh \
+    &&  rtk init --global --agent claude \
+    &&  rtk init --agent hermes 
