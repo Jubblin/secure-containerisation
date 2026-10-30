@@ -1,0 +1,82 @@
+name: Update auto-merge PRs
+
+# When main moves, bring every open auto-merge PR up to date so `scan`
+# re-runs on it and it can merge (the ruleset requires up-to-date branches).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Overlapping runs cancel: the newest main is the one PRs must be updated to.
+concurrency:
+  group: update-auto-merge-prs
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      APP_ID: ${{ secrets.APP_ID }}
+      APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+    steps:
+      # Updates pushed with GITHUB_TOKEN never trigger workflows, so `scan`
+      # would not re-run. Use a GitHub App installation token instead.
+      - name: Check app secrets
+        run: |
+          missing=0
+          for v in APP_ID APP_PRIVATE_KEY; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Secret $v is not set; cannot update auto-merge PRs. See the PR description for GitHub App setup."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-workflows: write
+
+      - name: Update behind auto-merge PRs
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          prs=$(gh pr list --repo "$REPO" --base main --state open --limit 200 \
+            --json number,isDraft,isCrossRepository,autoMergeRequest,headRefOid \
+            --jq '.[] | select(.isDraft == false and .isCrossRepository == false and .autoMergeRequest != null) | "\(.number) \(.headRefOid)"')
+
+          if [ -z "$prs" ]; then
+            echo "No open non-draft, same-repo auto-merge PRs into main."
+            exit 0
+          fi
+
+          failed=0
+          while read -r number sha; do
+            behind=$(gh api "repos/$REPO/compare/main...$sha" --jq '.behind_by') || {
+              echo "::warning::PR #$number: could not compare with main"
+              failed=1
+              continue
+            }
+            if [ "$behind" -eq 0 ]; then
+              echo "PR #$number is up to date; skipping."
+              continue
+            fi
+            if out=$(gh api --method PUT "repos/$REPO/pulls/$number/update-branch" -f expected_head_sha="$sha" 2>&1); then
+              echo "PR #$number: update requested ($behind commits behind)."
+            else
+              echo "::warning::PR #$number: update failed (conflicts or head moved?): $out"
+              failed=1
+            fi
+          done <<< "$prs"
+
+          exit "$failed"
