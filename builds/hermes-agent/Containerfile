@@ -1,5 +1,5 @@
 # Pin to a release tag + index digest. Bump from Docker Hub tags when upgrading.
-FROM nousresearch/hermes-agent@sha256:36099926da316742423544e055d4734777105ffe6341873af5459b957d0c2919
+FROM nousresearch/hermes-agent@sha256:9c5561579f3ffdf333401797094ac3a743738d6c25d40f4331c7bf77b694238d
 
 # Piped installers below must fail the build when the download fails.
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
